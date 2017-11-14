@@ -1,14 +1,16 @@
 package guestbook
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
+	"runtime"
 	"time"
 
-	"appengine"
-	"appengine/datastore"
-	"appengine/user"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/user"
 )
 
 // [START greeting_struct]
@@ -40,7 +42,7 @@ func welcome(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `Welcome, %s! (<a href="%s">sign out</a>)`, u, url)
 }
 
-func guestbookKey(c appengine.Context) *datastore.Key {
+func guestbookKey(c context.Context) *datastore.Key {
 	// The string "default_guestbook" here could be varied to have multiple guestbooks.
 	return datastore.NewKey(c, "Guestbook", "default_guestbook", 0, nil)
 }
@@ -70,6 +72,7 @@ func root(w http.ResponseWriter, r *http.Request) {
 
 // [END func_root]
 
+var runtimeVersion = runtime.Version()
 var guestbookTemplate = template.Must(template.New("book").Parse(`
 <html>
   <head>
@@ -88,6 +91,9 @@ var guestbookTemplate = template.Must(template.New("book").Parse(`
       <div><textarea name="content" rows="3" cols="60"></textarea></div>
       <div><input type="submit" value="Sign Guestbook"></div>
     </form>
+    <div class="runtime-version">
+      golang version: ` + runtimeVersion + `
+    </div>
   </body>
 </html>
 `))
