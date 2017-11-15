@@ -39,97 +39,69 @@ func TestRoot(t *testing.T) {
 }
 
 func TestSign(t *testing.T) {
-	instance := aetestNewInstance(t)
-	defer instance.Close()
-
-	values := url.Values{}
-	content := "aaaa42"
-	values.Set("content", content)
-
-	req, _ := instance.NewRequest(
-		"POST",
-		"/sign",
-		strings.NewReader(values.Encode()),
-	)
-	// このrequestはformなのでcontent-typeを指定する
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	ctx := appengine.NewContext(req)
-
-	res := httptest.NewRecorder()
-
-	sign(res, req)
-
-	if res.Code != http.StatusFound {
-		t.Fatalf("Non-expected status code%v:\n\tbody: %v", "200", res.Code)
+	testCases := []struct {
+		isLogin  bool
+		userName string
+	}{
+		{false, ""},
+		{true, "test@example.test"},
 	}
 
-	q := datastore.NewQuery("Greeting").Ancestor(guestbookKey(ctx)).Limit(10)
-	greetings := make([]Greeting, 0, 10)
-	q.GetAll(ctx, &greetings)
+	for _, testCase := range testCases {
+		instance := aetestNewInstance(t)
+		defer instance.Close()
 
-	// greetingsのsizeが1であること
-	if len := len(greetings); len != 1 {
-		t.Fatalf("len(greetings) != 1, but %v", len)
-	}
+		values := url.Values{}
+		content := "aaaa42"
+		values.Set("content", content)
 
-	// 最初のgreetingのContentがpostしたものであること
-	if g := greetings[0]; g.Content != content {
-		t.Fatalf("greetings[0].Content != inputted_content, but %v", g.Content)
-	}
+		req, _ := instance.NewRequest(
+			"POST",
+			"/sign",
+			strings.NewReader(values.Encode()),
+		)
 
-	// 最初のgreetingのAuthorは、loginしていないので空文字であること
-	if g := greetings[0]; g.Author != "" {
-		t.Fatalf("greetings[0].Author != \"\", but %v", g.Author)
-	}
-}
+		// このrequestはformなのでcontent-typeを指定する
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		ctx := appengine.NewContext(req)
 
-// FIXME: TestSign とほとんど同じなので共通化したい
-func TestSignWithLogin(t *testing.T) {
-	instance := aetestNewInstance(t)
-	defer instance.Close()
+		res := httptest.NewRecorder()
 
-	values := url.Values{}
-	content := "aaaa42"
-	values.Set("content", content)
+		if testCase.isLogin {
+			// login
+			u := user.User{Email: testCase.userName, ID: "1"}
+			aetest.Login(&u, req)
+		}
 
-	req, _ := instance.NewRequest(
-		"POST",
-		"/sign",
-		strings.NewReader(values.Encode()),
-	)
-	// このrequestはformなのでcontent-typeを指定する
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	ctx := appengine.NewContext(req)
+		sign(res, req)
 
-	res := httptest.NewRecorder()
+		if res.Code != http.StatusFound {
+			t.Fatalf("Non-expected status code%v:\n\tbody: %v", "200", res.Code)
+		}
 
-	// login
-	userName := "test@example.test"
-	u := user.User{Email: userName, ID: "1"}
-	aetest.Login(&u, req)
+		q := datastore.NewQuery("Greeting").Ancestor(guestbookKey(ctx)).Limit(10)
+		greetings := make([]Greeting, 0, 10)
+		q.GetAll(ctx, &greetings)
 
-	sign(res, req)
+		// greetingsのsizeが1であること
+		if len := len(greetings); len != 1 {
+			t.Fatalf("len(greetings) != 1, got %v", len)
+		}
 
-	if res.Code != http.StatusFound {
-		t.Fatalf("Non-expected status code%v:\n\tbody: %v", "200", res.Code)
-	}
+		// 最初のgreetingのContentがpostしたものであること
+		if g := greetings[0]; g.Content != content {
+			t.Fatalf("greetings[0].Content != inputted_content, got %v", g.Content)
+		}
 
-	q := datastore.NewQuery("Greeting").Ancestor(guestbookKey(ctx)).Limit(10)
-	greetings := make([]Greeting, 0, 10)
-	q.GetAll(ctx, &greetings)
-
-	// greetingsのsizeが1であること
-	if len := len(greetings); len != 1 {
-		t.Fatalf("len(greetings) != 1, but %v", len)
-	}
-
-	// 最初のgreetingのContentがpostしたものであること
-	if g := greetings[0]; g.Content != content {
-		t.Fatalf("greetings[0].Content != inputted_content, but %v", g.Content)
-	}
-
-	// 最初のgreetingのAuthorがlogin userであること
-	if g := greetings[0]; g.Author != userName {
-		t.Fatalf("greetings[0].Author != userName, but %v", g.Author)
+		// 最初のgreetingのAuthorは、isLoginがtrueであればuserName, そうでなければ空文字であること
+		if testCase.isLogin {
+			if g := greetings[0]; g.Author != testCase.userName {
+				t.Fatalf("greetings[0].Author != userName, got %v", g.Author)
+			}
+		} else {
+			if g := greetings[0]; g.Author != "" {
+				t.Fatalf("greetings[0].Author != \"\", got %v", g.Author)
+			}
+		}
 	}
 }
