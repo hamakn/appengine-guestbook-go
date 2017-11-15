@@ -1,0 +1,10 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/hamakn/appengine-guestbook-go
+    docker:
+      - image: mercari/appengine-go
+    steps:
+      - checkout
+      - run: goapp get
+      - run: goapp test
