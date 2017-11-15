@@ -1,3 +1,7 @@
+[![CircleCI](https://circleci.com/gh/hamakn/appengine-guestbook-go/tree/master.svg?style=svg)](https://circleci.com/gh/hamakn/appengine-guestbook-go/tree/master)
+
+This repository is fork of [GoogleCloudPlatform/appengine-guestbook-go](https://github.com/GoogleCloudPlatform/appengine-guestbook-go)
+
 # Guestbook
 
 Guestbook is an example application showing basic usage of Google App
